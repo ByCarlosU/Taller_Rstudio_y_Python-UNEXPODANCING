@@ -1,0 +1,107 @@
+---
+title: "Árbol de Decisión - UNEXPODANCING"
+author: "Carlos Urbina EXP.2022100156, Vanessa Bolivar EXP.2022100162. GRUPO 2. Inteligencia Artificial"
+date: "01 de Marzo de 2026"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    collapsed: true
+    smooth_scroll: true
+    theme: journal
+    highlight: kate
+    df_print: paged
+    code_folding: show
+---
+
+# 1. Introducción
+
+En este documento se desarrolla un modelo de Árbol de Decisión para clasificar movimientos correctos e incorrectos en un sistema tipo Just Dance, utilizando variables angulares de brazos y piernas.
+
+# 2. Carga de Librerías
+# Base Personal
+```{r setup, message=FALSE, warning=FALSE}
+library(readr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(ggplot2)
+```
+
+# 3. Carga del Dataset
+```{r}
+data <- read_csv("dance_dataset.csv")
+head(data)
+```
+
+# 4. Preparación de Datos
+
+Convertimos la variable objetivo a factor para clasificación:
+
+```{r}
+data$label <- as.factor(data$label)
+str(data)
+```
+
+# 5. División en Entrenamiento y Prueba
+
+Se divide el dataset en 80% entrenamiento y 20% prueba.
+
+```{r}
+set.seed(42)
+
+trainIndex <- createDataPartition(data$label, p = 0.8, list = FALSE)
+trainData <- data[trainIndex, ]
+testData <- data[-trainIndex, ]
+
+dim(trainData)
+dim(testData)
+```
+
+# 6. Creación del Modelo Árbol de Decisión
+
+```{r}
+model <- rpart(label ~ left_arm + right_arm + left_leg + right_leg,
+               data = trainData,
+               method = "class")
+```
+
+# 7. Visualización del Árbol
+
+```{r}
+rpart.plot(model, 
+           type = 2, 
+           extra = 104, 
+           fallen.leaves = TRUE,
+           tweak = 1.2,
+           main = "Árbol de Decisión - Clasificación de Movimientos")
+```
+
+# 8. Importancia de Variables
+
+```{r}
+model$variable.importance
+```
+
+# 9. Predicciones
+
+```{r}
+predictions <- predict(model, testData, type = "class")
+head(predictions)
+```
+
+# 10. Evaluación del Modelo
+
+```{r}
+conf_matrix <- confusionMatrix(predictions, testData$label)
+conf_matrix
+```
+
+# 11. Conclusiones
+
+El modelo de Árbol de Decisión permite clasificar movimientos correctos e incorrectos basándose en los ángulos de brazos y piernas.
+
+La matriz de confusión muestra el rendimiento del modelo en términos de exactitud (Accuracy), sensibilidad y especificidad.
+
+El análisis demuestra que el árbol es capaz de separar adecuadamente los movimientos con alta precisión.
