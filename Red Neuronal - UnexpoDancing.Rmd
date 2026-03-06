@@ -1,0 +1,144 @@
+---
+title: "Red Neuronal - UnexpoDancing"
+author: "Carlos Urbina EXP.2022100156, Vanessa Bolivar EXP.2022100162. GRUPO 2. Inteligencia Artificial"
+date: "01 de Marzo de 2026"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
+    theme: journal
+    highlight: kate
+    df_print: paged
+    code_folding: show
+---
+
+# Red Neuronal Artificial (TensorFlow - Keras)
+
+## 1. Introducción
+
+En esta sección se implementa una Red Neuronal Artificial utilizando Keras con backend TensorFlow, con el objetivo de clasificar movimientos correctos e incorrectos en el sistema tipo Just Dance, basándose en los ángulos de brazos y piernas. 
+## 2. Carga de Librerías
+
+```{r warning=FALSE, message=FALSE}
+library(keras)
+library(caret)
+library(readr)
+library(tensorflow)
+```
+
+## 3. Carga del Dataset
+
+```{r message=FALSE}
+data <- read_csv("dance_dataset.csv")
+```
+
+## 4. Preparación de los Datos
+
+```{r}
+data$label <- as.factor(data$label)
+```
+
+## 5. División en Entrenamiento y Prueba
+
+```{r}
+set.seed(42)
+trainIndex <- createDataPartition(data$label, p = 0.8, list = FALSE)
+trainData <- data[trainIndex, ]
+testData  <- data[-trainIndex, ]
+```
+
+## 6. Separación de Variables
+
+```{r}
+x_train <- as.matrix(trainData[, c("left_arm", "right_arm", "left_leg", "right_leg")])
+x_test  <- as.matrix(testData[, c("left_arm", "right_arm", "left_leg", "right_leg")])
+
+y_train <- as.numeric(as.factor(trainData$label)) - 1
+y_test  <- as.numeric(as.factor(testData$label)) - 1
+```
+
+## 7. Normalización
+
+```{r}
+x_train <- scale(x_train)
+x_test  <- scale(x_test, 
+                 center = attr(x_train, "scaled:center"), 
+                 scale = attr(x_train, "scaled:scale"))
+```
+
+## 8. Codificación One-Hot (Manual)
+
+```{r}
+num_classes <- length(unique(y_train))
+y_train_cat <- as.matrix(model.matrix(~ 0 + as.factor(y_train)))
+y_test_cat  <- as.matrix(model.matrix(~ 0 + as.factor(y_test)))
+colnames(y_train_cat) <- NULL
+colnames(y_test_cat) <- NULL
+```
+
+## 9. Construcción del Modelo
+
+
+
+```{r}
+model <- keras_model_sequential()
+model$add(layer_input(shape = c(4)))
+model$add(layer_dense(units = 16, activation = "relu"))
+model$add(layer_dense(units = 8, activation = "relu"))
+model$add(layer_dense(units = num_classes, activation = "softmax"))
+```
+
+## 10. Compilación del Modelo
+
+```{r}
+model$compile(
+  loss = "categorical_crossentropy",
+  optimizer = "adam",
+  metrics = list("accuracy")
+)
+```
+
+## 11. Entrenamiento
+
+```{r}
+history <- model$fit(
+  x_train,
+  y_train_cat,
+  epochs = as.integer(50),
+  batch_size = as.integer(16),
+  validation_split = 0.2,
+  verbose = 0
+)
+
+# Convertimos el historial a un formato que R pueda entender para graficar
+history_df <- as.data.frame(history$history)
+plot(history_df$accuracy, type = "l", col = "blue", main = "Evolución de Accuracy", xlab = "Época", ylab = "Accuracy")
+```
+
+## 12. Evaluación del Modelo
+
+```{r}
+score <- model$evaluate(x_test, y_test_cat, verbose = 0)
+print(score)
+```
+
+## 13. Predicciones y Matriz de Confusión
+
+```{r}
+predictions <- model$predict(x_test)
+predicted_classes <- apply(predictions, 1, which.max) - 1
+
+confusionMatrix(factor(predicted_classes, levels = 0:(num_classes-1)),
+                factor(y_test, levels = 0:(num_classes-1)))
+```
+
+## 14. Conclusión
+
+La red neuronal permitió modelar relaciones no lineales entre los ángulos corporales y la clasificación del movimiento.  
+
+El modelo fue entrenado durante 50 épocas utilizando el optimizador Adam y función de pérdida categorical crossentropy.  
+
+La métrica de accuracy obtenida permite comparar el desempeño con el árbol de decisión desarrollado previamente.
